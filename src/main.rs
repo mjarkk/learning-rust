@@ -19,17 +19,23 @@ fn main() {
     };
 
     let out = parse_element(&mut html_data.chars().collect(), true);
-    pritty_print(out, 0);
+    pritty_print(out, 0, true);
 }
 
-fn pritty_print(el: HtmlEl, tabs: usize) {
-    print!("{}{}", "  ".repeat(tabs), el.tag_name);
-    if el.text_contents.len() > 0 {
-        print!("| {}", el.text_contents);
+fn pritty_print(el: HtmlEl, mut tabs: usize, is_start: bool) {
+    if !is_start {
+        let mut to_print = "  ".repeat(tabs) + &el.tag_name;
+        if el.text_contents.len() > 0 {
+            to_print = to_print + "| " + &el.text_contents;
+        }
+        println!("{}", to_print);
     }
-    println!("");
     for child in el.childeren {
-        pritty_print(child, tabs + 1);
+        tabs = tabs + 1;
+        if is_start {
+            tabs = 0;
+        }
+        pritty_print(child, tabs, false);
     }
 }
 
@@ -59,7 +65,7 @@ fn format_html_text(s: String) -> String {
     let mut adding_noise = false;
     for c in s.chars() {
         match c {
-            ' ' | '\n' => adding_noise = true,
+            ' ' | '\n' | '\r' | '\t' => adding_noise = true,
             _ => {
                 if adding_noise {
                     output.push(' ');
@@ -116,7 +122,18 @@ fn parse_element(chars: &mut Vec<char>, is_init: bool) -> HtmlEl {
                         parsing_el.childeren.push(new_text_el(current_text));
                     }
                     current_text = String::new();
-                    parsing_el.childeren.push(parse_element(chars, false));
+
+                    match chars.split_first() {
+                        Some(x) => {
+                            if *(x.0) != '/' {
+                                let let_to_push = parse_element(chars, false);
+                                parsing_el.childeren.push(let_to_push);
+                            } else {
+                                parsing_state = ParsingStage::TagEnd;
+                            }
+                        }
+                        None => {}
+                    }
                 }
                 _ => {
                     current_text.push(current_char);
