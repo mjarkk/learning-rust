@@ -10,8 +10,6 @@ struct HtmlEl {
 }
 
 fn main() {
-    println!("{}", format_html_text(String::from("cba  abc")));
-
     let html_data = match load_file() {
         Ok(out) => out,
         Err(e) => {
@@ -25,7 +23,11 @@ fn main() {
 }
 
 fn pritty_print(el: HtmlEl, tabs: usize) {
-    println!("{}{}", "  ".repeat(tabs), el.tag_name);
+    print!("{}{}", "  ".repeat(tabs), el.tag_name);
+    if el.text_contents.len() > 0 {
+        print!("| {}", el.text_contents);
+    }
+    println!("");
     for child in el.childeren {
         pritty_print(child, tabs + 1);
     }
@@ -53,16 +55,25 @@ fn new_text_el(text: String) -> HtmlEl {
 }
 
 fn format_html_text(s: String) -> String {
-    let new_lines_replace: Vec<&str> = s.rsplit("\n").collect();
-    let mut out = new_lines_replace.join(" ");
-
-    let spaces: Vec<&str> = out.rsplit(" ").collect();
-    out = spaces.join(" ");
-
-    if out == " " {
-        out = String::new();
+    let mut output = String::new();
+    let mut adding_noise = false;
+    for c in s.chars() {
+        match c {
+            ' ' | '\n' => adding_noise = true,
+            _ => {
+                if adding_noise {
+                    output.push(' ');
+                    adding_noise = false;
+                }
+                output.push(c);
+            }
+        }
     }
-    out
+
+    if output == " " {
+        output = String::new();
+    }
+    output
 }
 
 fn parse_element(chars: &mut Vec<char>, is_init: bool) -> HtmlEl {
@@ -102,7 +113,6 @@ fn parse_element(chars: &mut Vec<char>, is_init: bool) -> HtmlEl {
                 '<' => {
                     current_text = format_html_text(current_text);
                     if current_text.len() > 0 {
-                        println!("Adding: {}", current_text.len());
                         parsing_el.childeren.push(new_text_el(current_text));
                     }
                     current_text = String::new();
