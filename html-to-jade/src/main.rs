@@ -34,11 +34,14 @@ fn pritty_print(el: HtmlEl, mut tabs: usize, is_start: bool) {
             to_print = to_print + "(";
             for arg in el.args {
                 to_print = to_print + &arg.key.to_string();
+                if arg.value.len() > 0 {
+                    to_print = to_print + "=\"" + &arg.value.to_string() + "\"";
+                }
             }
             to_print = to_print + ")";
         }
         if el.text_contents.len() > 0 {
-            to_print = to_print + " " + &el.text_contents;
+            to_print = to_print + "| " + &el.text_contents;
         }
         println!("{}", to_print);
     }
@@ -150,7 +153,9 @@ fn parse_element(chars: &mut Vec<char>, is_init: bool) -> HtmlEl {
                 }
                 '=' | '"' | '\'' => {
                     if parsing_arg.key.len() > 0 {
-                        parsing_arg.value.push(current_char);
+                        if current_char != '=' {
+                            parsing_arg.value.push(current_char);
+                        }
                         parsing_state = ParsingStage::TagArgValue;
                     } else {
                         parsing_arg.key.push(current_char);
@@ -161,22 +166,16 @@ fn parse_element(chars: &mut Vec<char>, is_init: bool) -> HtmlEl {
                 }
             },
             ParsingStage::TagArgValue => match current_char {
-                '>' | '"' | '\'' => {
-                    if parsing_arg.key.len() > 0 {
+                '"' | '\'' => {
+                    if parsing_arg.value.len() > 0 {
                         let x: &[_] = &['"', '\''];
                         parsing_arg.value = parsing_arg.value.trim_start_matches(x).to_string();
                         parsing_el.args.push(parsing_arg);
+                        parsing_arg = new_html_el_arg();
+                        parsing_state = ParsingStage::TagArgName;
+                    } else {
+                        parsing_arg.value.push(current_char);
                     }
-                    parsing_arg = new_html_el_arg();
-                    match current_char {
-                        '"' => {
-                            parsing_state = ParsingStage::TagArgName;
-                        }
-                        '>' => {
-                            parsing_state = ParsingStage::Text;
-                        }
-                        _ => {}
-                    };
                 }
                 _ => {
                     parsing_arg.value.push(current_char);
