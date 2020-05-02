@@ -1,5 +1,5 @@
-mod traids;
+mod ownership;
 
 fn main() {
-  traids::run();
+  ownership::run();
 }
